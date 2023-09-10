@@ -262,9 +262,19 @@ def clean_df(df):
   return df
 
 
-def sacar_excel(df, team):
-  df.to_excel(f'analisis {team}.xlsx',
-             sheet_name=team)  
+def tacticas(df):
+  exteriores = df.transpose()[(df.transpose()['Ataque'] == "Princeton") | (df.transpose()['Ataque'] == "MOV") | (df.transpose()['Ataque'] == "CyL")].transpose()
+  interiores = df.transpose()[(df.transpose()['Ataque'] == "MA") | (df.transpose()['Ataque'] == "PB")].transpose()
+  neutras = df.transpose()[(df.transpose()['Ataque'] != "MA") & (df.transpose()['Ataque'] != "PB") & (df.transpose()['Ataque'] != "Princeton") & (df.transpose()['Ataque'] != "MOV") & (df.transpose()['Ataque'] != "CyL")].transpose()
+
+  return exteriores, interiores, neutras
+
+def sacar_excel(df, team, ext, inte, neut):
+  with pd.ExcelWriter(f'analisis {team}.xlsx', engine='openpyxl') as writer:
+      df.to_excel(writer, sheet_name = team)
+      ext.to_excel(writer, sheet_name='Exteriores')
+      inte.to_excel(writer, sheet_name='Interiores')
+      neut.to_excel(writer, sheet_name='Neutras')
   files.download(f'analisis {team}.xlsx')
 
 
@@ -274,8 +284,8 @@ def excel_rivales(user, password, teamid, season):
   played_matches = games_played(xml_sched)
   df, team = analisis_rival(played_matches, user, password, teamid)
   df = clean_df(df)
-  sacar_excel(df, team)
-
+  exteriores, interiores, neutras = tacticas(df)
+  sacar_excel(df, team, exteriores, interiores, neutras)
 
 ###GENERATE EXCEL
 
