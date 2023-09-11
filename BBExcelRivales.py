@@ -48,9 +48,10 @@ def games_played(xml_sched):
     if child.attrib.get('type') != "unknown":
       games_in_season += [child.attrib.get('id')]
       dates += [child.attrib.get('start')]
+      game_type += [child.attrib.get('type')]
 
   dates = [parser.parse(x) for x in dates]
-  games_dates = list(zip(games_in_season, dates))
+  games_dates = list(zip(games_in_season, dates, game_type))
   sorted_data = sorted(games_dates, key=lambda x: x[1], reverse = True)
   played_matches = [i for i in sorted_data if i[1] < current_datetime]
 
@@ -150,11 +151,12 @@ def analisis_rival(played_matches, user, password, teamid):
   session = requests.Session()
   response = session.get(base_url, params=params_autent)
 
-  df = pd.DataFrame(columns=['Rival', 'Ataque', 'Defensa', 'Enfoque', 'Ritmo','Dif. esfuerzo', 'Táctica rival', 'Def. rival', 'Preds. enfoque rival', 'Preds. ritmo rival', 'Calis', 'AE','AI', 'DE', 'DI', 'REB', 'MO', 'Resultado', 'OT', 'Titulares','B', 'E', 'A', 'AP', 'P', 'Suplentes', 'B', 'E', 'A', 'AP', 'P'])
+  df = pd.DataFrame(columns=["Tipo partido", 'Rival', 'Ataque', 'Defensa', 'Enfoque', 'Ritmo','Dif. esfuerzo', 'Táctica rival', 'Def. rival', 'Preds. enfoque rival', 'Preds. ritmo rival', 'Calis', 'AE','AI', 'DE', 'DI', 'REB', 'MO', 'Resultado', 'OT', 'Titulares','B', 'E', 'A', 'AP', 'P', 'Suplentes', 'B', 'E', 'A', 'AP', 'P'])
 
-  for i, j in played_matches:
+  for i, j, k in played_matches:
     boxscore = session.get(base_url + 'boxscore.aspx', params = {'matchid':i})
     xml_box = ET.fromstring(boxscore.content)
+    game_type = k
 
     score = int(xml_box.find("./match/awayTeam/score").text) - int(xml_box.find("./match/homeTeam/score").text)
     effortDelta = int(xml_box.find("./match/effortDelta").text)
@@ -214,7 +216,7 @@ def analisis_rival(played_matches, user, password, teamid):
       score *= -1
     
 
-    new_row = [rival, strategy, defense, focus, pace, effortDelta, rival_strat, rival_def, rival_focus, rival_paces, "", ae, ai, de, di, reb, mo, str(score), ot, "", pg_s, sg_s, sf_s, pf_s, c_s, "", pg_b, sg_b, sf_b, pf_b, c_b]
+    new_row = [game_type, rival, strategy, defense, focus, pace, effortDelta, rival_strat, rival_def, rival_focus, rival_paces, "", ae, ai, de, di, reb, mo, str(score), ot, "", pg_s, sg_s, sf_s, pf_s, c_s, "", pg_b, sg_b, sf_b, pf_b, c_b]
     df.loc[len(df)] = new_row
 
   return df, team
@@ -261,6 +263,31 @@ def clean_df(df):
   df = df.replace("Normal.hit",'Normal')
   df = df.replace("Normal.miss",'Normal (X)')
 
+  df = df.replace("nt.roundrobin", "Liguilla")
+  df = df.replace("nt.friendly", "Amistoso")
+  df = df.replace("nt.final", "Final")
+  df = df.replace("nt.semifinal", "Semifinal")
+  df = df.replace("nt.qualifier", "Clasificatorio Mundial")
+  df = df.replace("nt.tournament.roundrobin", "Consolación")
+  df = df.replace("nt.tournament.playoffs", "Playoffs Consolación")
+
+  df = df.replace("league.rs", "Liga")
+  df = df.replace("friendly", "Amistoso")
+  df = df.replace("bbm", "BBM")
+  df = df.replace("bbm.playoff", "BBM3 PO")
+  df = df.replace("bbb", "B3")
+  df = df.replace("bbb.neutral", "B3 PO")
+  df = df.replace("cup", "Copa")
+  df = df.replace("pl.rsneutral", "LP")
+  df = df.replace("pl.semifinalneutral", "LP")
+  df = df.replace("pl.finalneutral", "LP")
+  df = df.replace("league.rs.tv", "Liga TV")
+  df = df.replace("league.relegation", "PO descenso")
+  df = df.replace("cup.semi_or_final", "Copa")
+  df = df.replace("league.quarterfinal", "PO (Cuartos)")
+  df = df.replace("league.semifinal", "PO (Semis)")
+  df = df.replace("league.final", "PO (Final)")
+
   return df
 
 
@@ -273,13 +300,14 @@ def tacticas(df):
 
   return exteriores, interiores, neutras
 
-def sacar_excel(df, team, ext, inte, neut):
-  with pd.ExcelWriter(f'analisis {team}.xlsx', engine='openpyxl') as writer:
+def sacar_excel(df, team, ext, inte, neut, temp):
+  with pd.ExcelWriter(f'analisis {team} temporada {temp}.xlsx', engine='openpyxl') as writer:
       df.to_excel(writer, sheet_name = team)
       ext.to_excel(writer, sheet_name='Exteriores')
       inte.to_excel(writer, sheet_name='Interiores')
       neut.to_excel(writer, sheet_name='Neutras')
-  files.download(f'analisis {team}.xlsx')
+
+  files.download(f'analisis {team} temporada {temp}.xlsx')
 
 
 def excel_rivales(user, password, teamid, season):
@@ -289,7 +317,8 @@ def excel_rivales(user, password, teamid, season):
   df, team = analisis_rival(played_matches, user, password, teamid)
   df = clean_df(df)
   exteriores, interiores, neutras = tacticas(df)
-  sacar_excel(df, team, exteriores, interiores, neutras)
+  sacar_excel(df, team, exteriores, interiores, neutras, season)
+
 
 ###GENERATE EXCEL
 
