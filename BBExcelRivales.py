@@ -44,10 +44,10 @@ def games_played(xml_sched):
   dates = []
   current_datetime = datetime.now(get_localzone())
 
-  for child in xml_sched.findall("./schedule")[0]:
-    games_in_season += [child.attrib.get('id')]
-    dates += [child.attrib.get('start')]
-
+  for child in xml_sched.findall("./schedule/match"):
+    if child.attrib.get('type') != "unknown":
+      games_in_season += [child.attrib.get('id')]
+      dates += [child.attrib.get('start')]
 
   dates = [parser.parse(x) for x in dates]
   games_dates = list(zip(games_in_season, dates))
@@ -156,10 +156,9 @@ def analisis_rival(played_matches, user, password, teamid):
     boxscore = session.get(base_url + 'boxscore.aspx', params = {'matchid':i})
     xml_box = ET.fromstring(boxscore.content)
 
-
-    effortDelta = int(xml_box.find("./match/effortDelta").text)
     score = int(xml_box.find("./match/awayTeam/score").text) - int(xml_box.find("./match/homeTeam/score").text)
-    
+    effortDelta = int(xml_box.find("./match/effortDelta").text)
+
     for child in xml_box.findall("./match/awayTeam/score"):
       partials = ([child.attrib.get('partials')])
       partials = partials[0].split(',')
@@ -168,6 +167,7 @@ def analisis_rival(played_matches, user, password, teamid):
       else:
         ot = "Sí"
 
+    
     for child in xml_box.findall("./match/awayTeam"):
       awayTeam = int(child.attrib.get('id'))
 
@@ -212,13 +212,14 @@ def analisis_rival(played_matches, user, password, teamid):
       mo = xml_box.find("./match/homeTeam/ratings/offensiveFlow").text
       pg_s, sg_s, sf_s, pf_s, c_s, pg_b, sg_b, sf_b, pf_b, c_b = find_lineup(xml_box, "homeTeam")
       score *= -1
+    
 
-    new_row = [rival, strategy, defense, focus, pace, effortDelta, rival_strat, rival_def, rival_focus, rival_paces, "", ae, ai, de, di, reb, mo, score, ot, "", pg_s, sg_s, sf_s, pf_s, c_s, "", pg_b, sg_b, sf_b, pf_b, c_b]
+    new_row = [rival, strategy, defense, focus, pace, effortDelta, rival_strat, rival_def, rival_focus, rival_paces, "", ae, ai, de, di, reb, mo, str(score), ot, "", pg_s, sg_s, sf_s, pf_s, c_s, "", pg_b, sg_b, sf_b, pf_b, c_b]
     df.loc[len(df)] = new_row
 
   return df, team
-    
 
+    
 def clean_df(df):
   df = df.transpose()
   df = df.replace('N/A','')
@@ -249,6 +250,7 @@ def clean_df(df):
   df = df.replace("Inside.hit",'Interior')
   df = df.replace("Inside.miss",'Interior (X)')
   df = df.replace("Outside.hit",'Exterior')
+  df = df.replace("outside.hit",'Exterior')
   df = df.replace("Outside.miss",'Exterior (X)')
   df = df.replace("outside.miss",'Exterior (X)')
 
@@ -260,6 +262,8 @@ def clean_df(df):
   df = df.replace("Normal.miss",'Normal (X)')
 
   return df
+
+
 
 
 def tacticas(df):
