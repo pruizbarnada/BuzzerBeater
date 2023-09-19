@@ -148,7 +148,7 @@ def analisis_rival(played_matches, user, password, teamid):
   session = requests.Session()
   response = session.get(base_url, params=params_autent)
 
-  df = pd.DataFrame(columns=["Tipo partido", 'Rival', 'Ataque', 'Defensa', 'Enfoque', 'Ritmo','Dif. esfuerzo', 'Táctica rival', 'Def. rival', 'Preds. enfoque rival', 'Preds. ritmo rival', 'Calis', 'AE','AI', 'DE', 'DI', 'REB', 'MO', 'Resultado', 'OT', 'Titulares','B', 'E', 'A', 'AP', 'P', 'Suplentes', 'B', 'E', 'A', 'AP', 'P'])
+  df = pd.DataFrame(columns=["Tipo partido", 'Rival', 'Ataque', 'Defensa', 'Enfoque', 'Ritmo','Dif. esfuerzo', 'Táctica rival', 'Def. rival', 'Calis', 'AE','AI', 'DE', 'DI', 'REB', 'MO', 'Resultado', 'OT', 'Titulares','B', 'E', 'A', 'AP', 'P', 'Suplentes', 'B', 'E', 'A', 'AP', 'P'])
 
   for i, j, k in played_matches:
     boxscore = session.get(base_url + 'boxscore.aspx', params = {'matchid':i})
@@ -165,7 +165,6 @@ def analisis_rival(played_matches, user, password, teamid):
         ot = ""
       else:
         ot = "Sí"
-
 
     for child in xml_box.findall("./match/awayTeam"):
       awayTeam = int(child.attrib.get('id'))
@@ -190,8 +189,6 @@ def analisis_rival(played_matches, user, password, teamid):
       effortDelta *= -1
       pg_s, sg_s, sf_s, pf_s, c_s, pg_b, sg_b, sf_b, pf_b, c_b = find_lineup(xml_box, "awayTeam")
 
-
-
     else:
       team = xml_box.find("./match/homeTeam/teamName").text
       rival = xml_box.find("./match/awayTeam/teamName").text
@@ -212,11 +209,21 @@ def analisis_rival(played_matches, user, password, teamid):
       pg_s, sg_s, sf_s, pf_s, c_s, pg_b, sg_b, sf_b, pf_b, c_b = find_lineup(xml_box, "homeTeam")
       score *= -1
 
+    if ((rival_focus != "N/A") and (rival_paces != "N/A")):
+      def_riv = rival_def + " + " + rival_focus +  " + " + rival_paces
+    elif (rival_focus != "N/A"):
+      def_riv = rival_def + " + " + rival_focus
+    elif (rival_paces != "N/A"):
+      def_riv = rival_def + " + " + rival_paces
+    else:
+      def_riv = rival_def
 
-    new_row = [game_type, rival, strategy, defense, focus, pace, effortDelta, rival_strat, rival_def, rival_focus, rival_paces, "", ae, ai, de, di, reb, mo, str(score), ot, "", pg_s, sg_s, sf_s, pf_s, c_s, "", pg_b, sg_b, sf_b, pf_b, c_b]
+
+    new_row = [game_type, rival, strategy, defense, focus, pace, effortDelta, rival_strat, def_riv, "", ae, ai, de, di, reb, mo, str(score), ot, "", pg_s, sg_s, sf_s, pf_s, c_s, "", pg_b, sg_b, sf_b, pf_b, c_b]
     df.loc[len(df)] = new_row
 
   return df, team
+
 
     
 def clean_df(df):
@@ -229,12 +236,12 @@ def clean_df(df):
   df = df.replace(1,'+')
   df = df.replace(2,'++')
 
-  df = df.replace("ManToMan",'Indi')
-  df = df.replace("23Zone",'2-3')
-  df = df.replace("32Zone",'3-2')
-  df = df.replace("131Zone",'1-3-1')
-  df = df.replace("InsideBoxAndOne",'CInt+1')
-  df = df.replace("OutsideBoxAndOne",'CExt+1')
+  df = df.replace("ManToMan",'Indi', regex=True)
+  df = df.replace("23Zone",'2-3', regex=True)
+  df = df.replace("32Zone",'3-2', regex=True)
+  df = df.replace("131Zone",'1-3-1', regex=True)
+  df = df.replace("InsideBoxAndOne",'Caja Int', regex=True)
+  df = df.replace("OutsideBoxAndOne",'Caja Ext', regex=True)
 
   df = df.replace("Motion",'MOV')
   df = df.replace("LookInside",'MA')
@@ -246,21 +253,21 @@ def clean_df(df):
   df = df.replace("LowPost",'PB')
   df = df.replace("Push",'MB')
 
-  df = df.replace("Balanced.hit",'Equilibrado')
-  df = df.replace("Balanced.miss",'Equilibrado (X)')
-  df = df.replace("Inside.hit",'Interior')
-  df = df.replace("Inside.miss",'Interior (X)')
-  df = df.replace("Outside.hit",'Exterior')
-  df = df.replace("outside.hit",'Exterior')
-  df = df.replace("Outside.miss",'Exterior (X)')
-  df = df.replace("outside.miss",'Exterior (X)')
+  df = df.replace("Balanced.hit",'Equi', regex=True)
+  df = df.replace("Balanced.miss",'Equi (X)', regex=True)
+  df = df.replace("Inside.hit",'Int', regex=True)
+  df = df.replace("Inside.miss",'Int (X)', regex=True)
+  df = df.replace("Outside.hit",'Ext', regex=True)
+  df = df.replace("outside.hit",'Ext', regex=True)
+  df = df.replace("Outside.miss",'Ext (X)', regex=True)
+  df = df.replace("outside.miss",'Ext (X)', regex=True)
 
-  df = df.replace("Fast.hit",'Rápida')
-  df = df.replace("Fast.miss",'Rápida (X)')
-  df = df.replace("Slow.hit",'Lenta')
-  df = df.replace("Slow.miss",'Lenta (X)')
-  df = df.replace("Normal.hit",'Normal')
-  df = df.replace("Normal.miss",'Normal (X)')
+  df = df.replace("Fast.hit",'Rap', regex=True)
+  df = df.replace("Fast.miss",'Rap (X)', regex=True)
+  df = df.replace("Slow.hit",'Len', regex=True)
+  df = df.replace("Slow.miss",'Len (X)', regex=True)
+  df = df.replace("Normal.hit",'Nor', regex=True)
+  df = df.replace("Normal.miss",'Nor (X)', regex=True)
 
   df = df.replace("nt.roundrobin", "Liguilla")
   df = df.replace("nt.friendly", "Amistoso")
