@@ -39,6 +39,7 @@ def calendar(user, password, teamid, season):
 def games_played(xml_sched):
   games_in_season = []
   dates = []
+  game_type = []
   current_datetime = datetime.now(get_localzone())
 
   for child in xml_sched.findall("./schedule/match"):
@@ -60,8 +61,7 @@ def find_lineup(xml_root, team):
   pg_s = sg_s = sf_s = pf_s = c_s = pg_b = sg_b = sf_b = pf_b = c_b = None
 
   for child in xml_root.findall(f"./match/{team}/boxscore/player"):
-    first_name = child.find("firstName").text
-    last_name = child.find("lastName").text
+    name = child.find("firstName").text + " " + child.find("lastName").text
     starter = child.find("isStarter").text
 
     for position in ["PG", "SG", "SF", "PF", "C"]:
@@ -71,48 +71,47 @@ def find_lineup(xml_root, team):
     max_min = max(minutes_PG, minutes_SG, minutes_SF, minutes_PF, minutes_C)
     if starter == "True":
       if max_min == minutes_PG:
-        # pg_s = first_name + " " + last_name
-        pg_s = last_name
+        pg_s = name
       elif max_min == minutes_SG:
-        sg_s = last_name
+        sg_s = name
       elif max_min == minutes_SF:
-        sf_s = last_name
+        sf_s = name
       elif max_min == minutes_PF:
-        pf_s = last_name
+        pf_s = name
       else:
-        c_s = last_name
+        c_s = name
 
     else:
       if max_min == minutes_PG:
         if pg_b == None:
-          pg_b = (last_name, minutes_PG)
+          pg_b = (name, minutes_PG)
         else:
           if pg_b[1] < minutes_PG:
-            pg_b = (last_name, minutes_PG)
+            pg_b = (name, minutes_PG)
       elif max_min == minutes_SG:
         if sg_b == None:
-          sg_b = (last_name, minutes_SG)
+          sg_b = (name, minutes_SG)
         else:
           if sg_b[1] < minutes_SG:
-            sg_b = (last_name, minutes_SG)
+            sg_b = (name, minutes_SG)
       elif max_min == minutes_SF:
         if sf_b == None:
-          sf_b = (last_name, minutes_SF)
+          sf_b = (name, minutes_SF)
         else:
           if sf_b[1] < minutes_SF:
-            sf_b = (last_name, minutes_SF)
+            sf_b = (name, minutes_SF)
       elif max_min == minutes_PF:
         if pf_b == None:
-          pf_b = (last_name, minutes_PF)
+          pf_b = (name, minutes_PF)
         else:
           if pf_b[1] < minutes_PF:
-            pf_b = (last_name, minutes_PF)
+            pf_b = (name, minutes_PF)
       else:
         if c_b == None:
-          c_b = (last_name, minutes_C)
+          c_b = (name, minutes_C)
         else:
           if c_b[1] < minutes_C:
-            c_b = (last_name, minutes_C)
+            c_b = (name, minutes_C)
 
 
   try:
@@ -137,6 +136,7 @@ def find_lineup(xml_root, team):
     print()
 
   return pg_s, sg_s, sf_s, pf_s, c_s, pg_b, sg_b, sf_b, pf_b, c_b
+
 
 
 def analisis_rival(played_matches, user, password, teamid):
@@ -166,7 +166,7 @@ def analisis_rival(played_matches, user, password, teamid):
       else:
         ot = "Sí"
 
-    
+
     for child in xml_box.findall("./match/awayTeam"):
       awayTeam = int(child.attrib.get('id'))
 
@@ -211,7 +211,7 @@ def analisis_rival(played_matches, user, password, teamid):
       mo = xml_box.find("./match/homeTeam/ratings/offensiveFlow").text
       pg_s, sg_s, sf_s, pf_s, c_s, pg_b, sg_b, sf_b, pf_b, c_b = find_lineup(xml_box, "homeTeam")
       score *= -1
-    
+
 
     new_row = [game_type, rival, strategy, defense, focus, pace, effortDelta, rival_strat, rival_def, rival_focus, rival_paces, "", ae, ai, de, di, reb, mo, str(score), ot, "", pg_s, sg_s, sf_s, pf_s, c_s, "", pg_b, sg_b, sf_b, pf_b, c_b]
     df.loc[len(df)] = new_row
@@ -233,6 +233,8 @@ def clean_df(df):
   df = df.replace("23Zone",'2-3')
   df = df.replace("32Zone",'3-2')
   df = df.replace("131Zone",'1-3-1')
+  df = df.replace("InsideBoxAndOne",'CInt+1')
+  df = df.replace("OutsideBoxAndOne",'CExt+1')
 
   df = df.replace("Motion",'MOV')
   df = df.replace("LookInside",'MA')
@@ -298,6 +300,7 @@ def tacticas(df):
   return exteriores, interiores, neutras
 
 def sacar_excel(df, team, ext, inte, neut, temp):
+
   with pd.ExcelWriter(f'analisis {team} temporada {temp}.xlsx', engine='openpyxl') as writer:
       df.to_excel(writer, sheet_name = team)
       ext.to_excel(writer, sheet_name='Exteriores')
@@ -315,6 +318,7 @@ def excel_rivales(user, password, teamid, season):
   df = clean_df(df)
   exteriores, interiores, neutras = tacticas(df)
   sacar_excel(df, team, exteriores, interiores, neutras, season)
+
 
 
 ###GENERATE EXCEL
