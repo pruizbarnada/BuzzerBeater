@@ -300,7 +300,6 @@ def tacticas(df):
   return exteriores, interiores, neutras
 
 def sacar_excel(df, team, ext, inte, neut, temp):
-
   with pd.ExcelWriter(f'analisis {team} temporada {temp}.xlsx', engine='openpyxl') as writer:
       df.to_excel(writer, sheet_name = team)
       ext.to_excel(writer, sheet_name='Exteriores')
